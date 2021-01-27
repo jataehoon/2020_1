@@ -1,4 +1,3 @@
-//수학과 2015059034 이정민
 #define _CRT_SECURE_NO_WARNINGS
 #include <stdio.h>
 char cipher(char* pwd, int spin);   //cipher라는 함수를 알려줍니다
