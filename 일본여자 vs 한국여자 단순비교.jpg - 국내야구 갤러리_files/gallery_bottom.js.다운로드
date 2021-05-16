@@ -1,0 +1,37 @@
+//----------------------------------------------------------------------
+//하단 카테고리 별 갤러리 랭킹 
+//----------------------------------------------------------------------
+var b_json_bottom_ranking = false;
+var json_bottom_ranking = function(data) {
+	if(data.length <= 0) return false;
+	if(b_json_bottom_ranking) return false;
+	b_json_bottom_ranking = true;
+	var rankingTotal = 60;
+	var bottom = '';
+	
+	for(var i in data){
+		bottom += '<dl>';
+		bottom += '<dt>'+ i + '</dt>';
+		for(var j in data[i]){
+			bottom += '<dd><a href="https://gall.dcinside.com/board/lists/?id='+data[i][j].name+'">'+data[i][j].ko_name+'</a></dd>';
+		}
+		bottom += '</dl>';
+	}
+	$('.dcfoot .dc_all .all_list').html(bottom)
+}
+var bottom_ranking = function() {	
+	$.ajax({
+     url:'//json2.dcinside.com/gallmain/gall_bottom_ranking.php?2',
+     dataType:"jsonp",
+     jsonpCallback: 'json_bottom_ranking',
+     cache: true,
+     jsonp:"jsoncallback",
+     success:function(data){
+     	json_bottom_ranking(data);
+     }
+ });
+}
+
+$(function(){
+	bottom_ranking();
+});

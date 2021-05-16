@@ -1,0 +1,118 @@
+
+$(function () {
+	if($("#kcaptcha_use").val() == 'Y') {
+		kcaptcha_init($("#no").val());
+	}
+	//다음(카카오) 추천검색
+	var kakao_rel_use = $("#kakao_rel_use").val();
+	if(kakao_rel_use == 'Y') {
+		var kakao_rel_txt = $("#kakao_rel_txt").val();
+		relateKeyword($("#no").val(), kakao_rel_txt);
+	}
+	moveCommentView();
+	/*
+	$(".write_div img").each(function(i, ele) {
+		if(ele.src != '' && ele.complete == true && ele.naturalWidth ==  0){
+			this.src += '&t=1';
+		}
+	});
+	*/
+});
+
+var moveCommentView = function() {
+	//댓글보기면 스크롤 이동
+	if($("#comment_view").val() === '1') {
+		setTimeout(function(){ document.getElementById('comment_wrap_'+$("#no").val()).scrollIntoView(); }, 1000);
+		
+	}
+}
+// 
+var showLayer = function(obj, layerName){
+	if($("#"+layerName).css("display") == "none"){
+		$("#"+layerName).show();
+	} else {
+		$("#"+layerName).hide();
+	}
+}
+
+// 일괄 다운로드
+var saveContentImgs = function() {
+	var zip = new JSZip();
+	var file_count = $('.appending_file_box li').length;
+	
+	$('.appending_file_box .loading_btntype').show().prev().hide();
+	
+	var add_file = function(url, filename) {
+		$.ajax({
+			url: url,
+			processData: false,
+			contentType: false,
+			xhrFields: { 
+				withCredentials: true,
+				responseType: 'blob'
+			},
+			success: function(imgData) {
+				zip.file(filename, imgData, {base64: true});
+				save_run();
+			}
+		});
+	}
+	
+	var save_run = function() {
+		if(Object.keys(zip.files).length < file_count) {
+			return false;
+		}
+		
+		zip.generateAsync({type:"blob"}).then(function(content) {
+		    saveAs(content, $.getURLParam('id') +'_'+ $.getURLParam('no') +'.zip');
+
+			$('.appending_file_box .loading_btntype').hide().prev().show();
+		});
+	}
+
+	$('.appending_file_box li').each(function(i) {
+		var url = $('a', this).attr('href').replace('/download.php', '/download_ajax2.php');
+
+		add_file(url, $('a', this).text());
+	});
+}
+
+//리스트
+var goList = function(url) {
+	location.href = url;
+}
+
+//수정
+var goModify = function(url) {
+	location.href = url;
+}
+
+//삭제
+var goDelete = function(url) {
+	location.href = url;
+}
+
+//삭제
+var goWrite = function(url) {
+	location.href = url;
+}
+
+
+//투표 iframe 리사이징
+var resizeHeight = function(FrameName)
+{
+    if(document.all) {
+        var body_height = frames['pollFrame'].document.body.scrollHeight;
+    } else {
+        var body_height= document.getElementById('pollFrame').contentWindow.document.body.offsetHeight;
+    }
+
+	 if(body_height != 22){ 
+	  document.getElementById('pollFrame').height=body_height;
+	 }else{
+	  document.getElementById('pollFrame').height=0;
+	 }
+}
+var goVote = function(url){
+	location.href = url;
+}

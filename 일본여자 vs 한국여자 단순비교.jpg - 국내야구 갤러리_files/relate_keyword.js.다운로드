@@ -1,0 +1,61 @@
+
+//다음 추천검색
+function relateKeyword(no, memo) {
+	var html = '';
+	
+	var gall_id = $("#id").val();
+	
+	var token  = get_cookie('ci_c');
+	
+	if(gall_id == "" || token == ""){
+		alert("잘못된 접근입니다!!");
+        return false;
+    }
+	
+	if(memo == "") return false;
+
+    $.ajax({
+		type:'POST',
+        url:'/api/daumkakao/getKeyword/',
+		cache: false,
+	    async: true,
+		dataType: "json",
+        data:{ ci_t:token,  id:gall_id, no: no, memo: memo},
+        success:function(data){
+        	//console.log(data);
+			try {
+				if(data.status == '200' && data.output['all'] != ''){
+					var basic_css = '';
+					var nLen = data.output['all'].length;
+					if(nLen > 0) {
+						for(var i=0; i < nLen; i++){
+							if(i / 5 == 1) basic_css = 'class="basic_key"';
+							if(i % 5 == 0) html += '<div ' + basic_css + '>'; 
+							html += '<a href="https://search.dcinside.com/combine/q/'+encodeURIComponent(data.output['all'][i].keyword)+'" target="_blank" class="ka_schAlliance_log relateLog">' + data.output['all'][i].keyword + '</a>';
+							if(i % 5 == 4) html += '</div>';
+						}
+						if(i % 5 != 0) html += '</div>';
+						//console.log("html:"+html);
+						$("#sch_logbox_"+no).prepend(html);
+	
+						$("#sch_alliance_box_"+no).show();
+					}
+				} else {
+					//console.log('추천검색 없을때');
+					//추천 검색 없을때 to do
+					/*var defKeyword = ['김유식','디시인사이드','갤러리','만두'];
+					var nRnd = Math.floor((Math.random() * (defKeyword.length-1)));
+					
+					html += '<div>'; 
+					html += '<a href="https://search.dcinside.com/combine/q/'+encodeURIComponent(defKeyword[nRnd])+'" target="_blank" class="ka_schAlliance_log relateLog">' + defKeyword[nRnd] + '</a>';
+					html += '</div>';*/
+					
+					//$("#sch_alliance_box_"+no).hide();
+				}
+			}
+			catch(e) {
+				console.log(e);
+			}
+		}
+	});
+}

@@ -1,0 +1,215 @@
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+/* 힛갤로, 나쁜글, 음란물 */
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+$(function () {
+
+	/* job url 비교 */
+	var location_url	= window.location.href;
+	var location_check	= location_url.indexOf('gall.');
+	var location_zeus_check = location_url.indexOf('zeus.');
+	var location_domain	= '';
+	if (location_check > 0) {
+		location_domain = 'gall';
+	} else if(location_zeus_check > 0) {
+		location_domain = 'zeus';
+	} else {
+		location_domain = 'job';
+	}
+
+
+	/* 힛갤로 confirm */
+	$('#userhit_go').click(function () {
+
+		/* view.php 참조 */
+		var check_1			= $('#check_1').val();
+		var check_2			= $('#check_2').val();
+		var check_3			= $('#check_3').val();
+		var check_4			= encodeURIComponent($('#check_4').val());
+		var check_5			= $('#check_5').val();
+		var content_title	= encodeURIComponent($('#check_6').val());
+		var gall_id			= $.getURLParam("id");
+		var content_no		= $.getURLParam("no");
+		var ko_name			= $('#lately_gallery').val();
+		ko_name				= ko_name.split('|');
+		ko_name				= encodeURIComponent(ko_name[1]);
+
+		$.ajax({
+			type:'POST',
+			url:'https://' + location_domain + '.dcinside.com/_api/userhit/userhit.php',
+			data:'proc=insert&table_no=' + check_5 + '&content_no=' + content_no + '&user_id=' + check_3 + '&user_nick=' + check_4 + '&gall_id=' + gall_id + '&ko_name=' + ko_name + '&member_no=' + check_1 + '&member_level=' + check_2 + '&subject=' + content_title + '&type=W',
+			success:function(html){
+
+				$('.r_popup_area').children().hide();
+				var ajax_result = $.trim(html);
+				ajax_result = ajax_result.split('|');
+				switch(ajax_result[0])
+				{
+				case'again':
+					$('#userhit_again').show();
+					break;
+				case'ok':
+					$('#userhit_ok').show();
+					break;
+				default:
+					alert(html);
+				break;
+				}
+
+			}
+		});
+
+	});
+
+
+	/* 나쁜글, 음란글 confirm */
+	$('.confirm_singo').click(function(){
+
+		var singo_type = $(this).attr('id');
+		var parent_div = $(this).parent().parent().parent();
+		/* view.php 참조 */
+		var check_1			= $('#check_1').val();
+		var check_2			= $('#check_2').val();
+		var check_3			= $('#check_3').val();
+		var check_4			= encodeURIComponent($('#check_4').val());
+		var check_5			= $('#check_5').val();
+		var gall_id			= $.getURLParam("id");
+		var content_no		= $.getURLParam("no");
+		var ko_name			= $('#lately_gallery').val();
+		ko_name				= ko_name.split('|');
+		ko_name				= encodeURIComponent(ko_name[1]);
+
+		/* 나쁜글 */
+		var singo_category = "";
+		if (singo_type=="bad") {
+			singo_category = 10;
+		}
+		parent_div.hide();
+
+		$.ajax({
+			type:'POST',
+			url:'https://' + location_domain + '.dcinside.com/_api/singo/singo.php',
+			data:'proc=insert&singo_type='+singo_type+'&singo_category='+singo_category+'&table_no=' + check_5 + '&content_no=' + content_no + '&user_id=' + check_3 + '&user_nick=' + check_4 + '&gall_id=' + gall_id + '&ko_name=' + ko_name + '&member_no=' + check_1 + '&member_level=' + check_2 + '',
+			success:function(html){
+
+				$('.r_popup_area').children().hide();
+				var a_data = $.trim(html);
+				a_data = a_data.split('|');
+				switch(a_data[0])
+				{
+				case'already':
+					$('#'+singo_type+'_already').show();
+					break;
+				case'again':
+					$('#'+singo_type+'_again').show();
+					break;
+				case'ok':
+					//$('#'+singo_type+'_ok').show(); theRok - 2013.10.10
+					alert('신고가 많은 경우 처리가 지연될 수 있으니\n이용 시 참고해주시기 바랍니다.');
+					break;
+				case'avoid':
+					alert('이용자가 많아 처리가 지연되고 있습니다.');
+					break;
+				default:
+					alert(html);
+				break;
+				}
+
+			}
+		});
+
+	});
+
+	/* 게시물 신고 */
+	$('.report_gall_go').click(function(){
+		if(confirm('허위 신고나 신고 사유와 맞지 않는 신고는 답변되지 않을 수 있으며 차단 될 수 있습니다. 해당 게시물에 대한 신고를 진행 하시겠습니까?')){
+			/* tocken */
+			var tocken = get_cookie('ci_c');
+			var id = $('#id').val();
+			var no = $('#no').val();
+
+			$.ajax({
+				type : "POST",
+				cache: false,
+				async: false,
+				url : "/singo/singo_url_duplicate_check_new",
+				data : {                     
+					ci_t	: tocken,
+					id		: id,
+					no		: no,
+				},
+				success : function(data) {
+					if (data) {							
+						alert(data);
+						return false;
+
+					} else {
+						var ko_name			= $('#lately_gallery').val();
+						ko_name				= ko_name.split('|');
+						ko_name				= encodeURIComponent(ko_name[1]);
+						location.href = 'https://gall.dcinside.com/singo/?id=singo&singo_id=' + id + '&singo_no=' + no + '&ko_name=' + ko_name + '&s_url=' + encodeURIComponent(location_url);
+					}
+
+				},
+				error : function(data) {
+					alert("중복 체크 오류"); 
+				}
+
+			});
+			/* 신고한 url 중복 검사 */
+		}
+	});
+
+	/* 힛갤로 popup, 나쁜글, 음란글 신고 */
+	$('.hitgall, .dislike, .report19').click(function () {
+		var click_class		= $(this).attr("class");
+
+		if (click_class == "hitgall") {
+			$('#userhit_confirm').show();
+			$('#bad_layer').hide();
+			$('#adult_layer').hide();
+		} else if (click_class == "dislike") {
+			$('#userhit_confirm').hide();
+			$('#bad_layer').show();
+			$('#adult_layer').hide();
+		} else if (click_class == "report19") {
+			$('#userhit_confirm').hide();
+			$('#bad_layer').hide();
+			$('#adult_layer').show();
+		}
+
+	});
+
+	/* 팝업 x btn */
+	$('.r_popup_area .r_close').click(function(event){
+		var parent_div = $(this).parent().parent();
+		parent_div.hide();
+	});
+
+	/* 팝업 확인, 취소 */
+	$('.r_popup_area .r_cancel, .r_popup_area .r_ok').click(function(){
+		var parent_div = $(this).parent().parent().parent();
+		parent_div.hide();
+	});
+
+
+	/* 힛갤로, 나쁜글 ? */
+	$('.bad_qs').hover(
+			function(){
+				$('.btn_bad_pop').show();
+			},
+			function(){
+				$('.btn_bad_pop').hide();
+			}
+	);
+
+	$('.hit_qs').hover(
+			function(){
+				$('.btn_hit_pop').show();
+			},
+			function(){
+				$('.btn_hit_pop').hide();
+			}
+	);
+
+});

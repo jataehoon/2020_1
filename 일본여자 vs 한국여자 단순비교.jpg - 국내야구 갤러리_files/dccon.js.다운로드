@@ -1,0 +1,1060 @@
+//*****************************************************************************/
+// COPYRIGHT dcinside All Rights Reserved
+//*****************************************************************************/
+//   0. System Name     : dcinside.com
+//   1. Programmer      : mh
+//   2. Programmed Date : 2018.05
+//   3. Comment         : 디시콘 관련 스크립트
+//*****************************************************************************/
+var getURLParameter = function(name) {
+    return decodeURIComponent((new RegExp('[?|&]' + name + '=' + '([^&;]+?)(&|#|;|$)').exec(location.search)||[,""])[1].replace(/\+/g, '%20'))||null;
+}
+var list_type = getURLParameter("board_type");
+var page = 0;
+var page_reload = false;
+$(function() {
+	var ci_t = get_cookie('ci_c');
+	
+	$(document).on('click', '.tx_dccon', function() {
+		var div = $('#div_con');
+		var no = $(this).attr('data-no');
+		var c_no = $(this).attr('r_idx');
+		var data_no = $("#div_con").data("no");
+		$("#div_con").data("no", no);
+		$("#div_con").data("c_no",c_no);
+		$("#div_con").data("tar", "icon");
+		$("#div_con").data("target", this);
+		
+		page = 0;
+		if(div.css("display") != "none") {
+			if((list_type == 'album' && no == data_no ) || list_type != 'album'){
+				div.hide();
+			} else {
+				dccon_input_layer();
+			}
+		} else {
+			dccon_input_layer();
+		}
+	});
+	
+	// 디시콘 메뉴클릭
+	$(document).on('click', '.tab_btnlist li', function() {
+		if($(this).hasClass('li_pack')) {
+			$("#div_con").data("tar", "icon");
+			$("#div_con").data("index", $('.li_pack').index(this));
+			show_package();
+			return false;
+		// 최근방문
+		} else if($(this).hasClass('recent_li')) {
+			$("#div_con").data("tar", "recent");
+			if(recent_list.length > 0) {
+				show_package();
+			} else {
+				dccon_input_layer();
+			}
+		}
+		//$('.inner .clear button').removeClass('on');
+	});
+
+	// 인기, 세팅
+	$(document).on('click', '.btn_dccon_hot , .btn_dccon_setting', function() {
+		if($(this).hasClass('on')) return false;
+		$('.tab_btnlist li').removeClass('on');
+		$('.inner .clear button').removeClass('on');
+		$('.dcconlist').hide();
+
+		if($(this).hasClass('btn_dccon_hot')) {
+			$("#div_con").data("tar", "shop");
+			if(hot_list.length > 0) {
+				show_package();
+			} else {
+				dccon_input_layer();
+			}
+		} else if($(this).hasClass('btn_dccon_setting')){
+			if(setting_list.length > 0) {
+				$('.hot').hide();
+				$('.setting').show();
+				$(this).addClass('on');
+			} else {
+				show_setting();
+			}
+		}
+
+	});
+	
+	// 디시콘 검색
+	$('#f_sch_dccon').submit(function() {
+		var ci_t = get_cookie('ci_c');
+		var type = $('input[name="type"]', this).val();
+		var keyword = $('input[name="keyword"]', this).val();
+		var page = $(this).data('page');
+
+		$('ul.option_box', this).hide();
+		
+		if(!keyword) {
+			alert('검색어를 입력해주세요.');
+			$('input[name="keyword"]', this).focus();
+			return false;
+		}
+		
+		$('#div_con .loading_layertype').show();
+		$('#f_sch_dccon').data('page', 1);
+		
+		$.ajax({
+			data : { 'ci_t' : ci_t, 'type' : type, 'keyword' : keyword, 'page' : page},
+			type : 'POST',
+			url : '/dccon/search',
+    		dataType : 'json',
+			cache : false,
+			async : true,
+			success : function (ajaxData) {
+				if(ajaxData.result == "success") {
+					var total_count = ajaxData.data.total_count || 0;
+
+					chg_home_html('search', total_count);
+
+					if(total_count == 0) {
+						$('#div_con .dccon_search_none span em').text(keyword);
+						$('#div_con .dccon_search_none').show();
+					}
+					else {
+						$('#div_con .dccon_search_none').hide();
+
+						$('#dccon_shop-tmpl').tmpl(ajaxData.data).appendTo($('#div_con .hot_inner.sch_con'));
+						
+	    				$('#div_con .hot_inner.sch_con > .dccon_shop_list').show();
+					}
+
+					$('#div_con .bottom_paging_box').html(ajaxData.paging);
+    			}
+    			
+    			if(typeof(ajaxData.msg) != 'undefined' && ajaxData.msg) {
+					alert(ajaxData.msg);
+				}
+
+    			$('#div_con .loading_layertype').hide();
+			}
+		});
+		
+		return false;
+	});
+
+	// 상점 이전, 다음
+	$(document).on('click', '#div_con .hotcon_paging_btn button', function() {
+		var btn = this;
+		var shop_list_elm = $('.hot_inner.hots .dccon_shop_list');
+		var shop = $(this).parents('.hot');
+		var hot_cnt = shop_list_elm.length - 1;
+		
+		$('.btn_hotcon_prev, .btn_hotcon_next').addClass('on');
+		
+		shop.find(shop_list_elm).each(function() {
+
+			if ($(this).css('display').match('block')) {
+				// 이전 페이지
+				if ($(btn).hasClass('btn_hotcon_prev')) {
+					if($(this).prev('.dccon_shop_list').length > 0) {
+						$(this).prev('.dccon_shop_list').show().siblings('.dccon_shop_list').hide();
+					}
+					
+					if($(this).index() <= 2) {
+						$('.btn_hotcon_prev').removeClass('on');
+					}
+					
+					return false;
+				// 다음 페이지
+				} else if ($(btn).hasClass('btn_hotcon_next')) {
+					if($(this).next('.dccon_shop_list').length > 0) {
+						$(this).next('.dccon_shop_list').show().siblings('.dccon_shop_list').hide();
+					}
+					
+					if($(this).index() >= hot_cnt) {
+						$('.btn_hotcon_next').removeClass('on');
+					}
+					
+					return false;
+				} else {
+					if($(this).index() >= hot_cnt) 	$('.btn_hotcon_next').removeClass('on');
+				}
+
+				
+				
+				
+			}
+		});
+		return false;
+	});
+
+	// 디시콘 페이징
+	$(document).on('click', '#div_con .btn_dccon_next, #div_con .btn_dccon_prev', function() {
+		if(max_page == 0) return false;
+		$("#div_con").data("tar", "icon");
+		page_reload = true;
+		if($(this).hasClass('btn_dccon_next')) {
+			page++;
+			if(page > max_page) page = 0;
+			
+		} else if($(this).hasClass('btn_dccon_prev')) {
+			page--;
+			if(page < 0) page = max_page;
+		}  
+
+		$("#div_con").data("index", "0");
+		if(icon_list[page]) {
+			show_package();
+		} else {
+			dccon_input_layer();
+		}
+		page_reload = false;
+		return false;
+		
+	});
+
+	// 관리 저장
+	$(document).on('click', '.setting .submit', function(){
+		save_setting();
+	});
+	// 관리 취소
+	$(document).on('click', '.setting .close', function(){
+		$('#div_con').hide();
+	});
+
+	//-------------------------------------------------------------
+	// 아이콘 입력
+	//-------------------------------------------------------------
+	$(document).on('click', '.img_dccon', function() {
+
+		//-------------------------------------------------------------
+		// 아이콘 유효 검사
+		//-------------------------------------------------------------
+		var formData = '';  
+		var img_src = $(this).find('img').prop('src');
+		var alt = $(this).attr('title');
+		var package_idx = $(this).attr('package_idx');
+		var detail_idx = $(this).attr('detail_idx');
+		var gall_id = $(document).data('comment_id') || getURLParameter("id");
+		var no = $(document).data('comment_no') || getURLParameter("no");
+
+		if(!no) {
+			no = $('#no').val();
+		}
+
+		if(!package_idx || !detail_idx || $('#div_con').data('processing')) {
+			return false;
+		}
+
+		formData += "id=" + gall_id + "&no=" + no + "&package_idx=" + package_idx + "&detail_idx=" + detail_idx;
+		
+		var _no = "";
+		var c_no = $(this).parents('.dccon_guidebox').children('.tx_dccon').attr('r_idx');
+		if(c_no) { _no = c_no; formData += "&c_no=" + c_no; } 
+		else if(no) { _no = no; }
+		else { _no = ""; }
+		
+		var name =  $("#name_" + _no);
+        var pw =  $("#password_" + _no);
+		var code = $("#code_" + _no);
+
+		if(name.length > 0) {
+			if(!name.val()) {
+				alert("닉네임을 입력하세요.");
+				name.focus();
+				return false;
+			} else {
+				formData += "&name=" + name.val();
+			}
+		} 
+
+		if(pw.length > 0) {
+			if (!pw.val()) {
+				alert("비밀번호을 입력하세요.");
+				pw.focus();
+				return false;
+			} else if(pw.val().length < 2) {
+				alert("비밀번호를 최소 2자리 이상 입력하셔야 합니다. 쉬운 비밀번호는 타인이 수정 또는 삭제하기 쉬우니, 어려운 비밀번호를 입력해 주세요.");
+				pw.focus();
+				return false;
+			} else {
+				formData += "&password=" + pw.val();
+			}
+		}
+
+		if(code.length > 0) {
+			if(!code.val()) {
+				alert('자동입력 방지코드를 입력해주세요.');
+				code.focus();
+				return false;
+			}else {
+				formData += "&code=" + code.val();
+			}
+		}
+
+		// push alram 
+		var check_6		= $('#check_6').val();
+		var check_7		= $('#check_7').val();
+		var check_8		= $('#check_8').val();
+
+		var code        = $('#code').val();
+
+		var input_type = "comment";
+		
+		// 입력 타입 구분
+		if ($('#tx_canvas_text').length > 0) {
+			input_type = "write";
+		}
+
+		var ci_t = get_cookie('ci_c');
+		
+		var t_vch2 = $(document).data('t_vch2');
+		var t_vch2_chk = $(document).data('t_vch2_chk');
+		
+		var c_gall_id = gall_id;
+		var c_gall_no = no;
+		if(t_vch2 == 'TOPRECOM' || t_vch2 == 'ISSUEZOOM') {
+			c_gall_id = $(document).data('gallery_id');
+			c_gall_no = $(document).data('article_no');
+		}
+		
+		var self_elm = this;
+		var no_attr = c_no ? 'r_idx="'+ c_no +'"' : 'data-no="'+ no +'"';
+		var grecaptchaResponse = $(self_elm).hasClass('grecaptcha-submit') ? grecaptcha.getResponse() : '';
+		
+		formData += "&ci_t=" + ci_t;
+		formData += "&input_type=" + input_type;
+		formData += "&t_vch2=" + t_vch2 + "&t_vch2_chk=" + t_vch2_chk;
+		formData += "&c_gall_id=" + c_gall_id + "&c_gall_no=" + c_gall_no;
+	    formData += '&g-recaptcha-response='+ grecaptchaResponse;
+		formData += "&check_6=" + check_6 + "&check_7=" + check_7 + "&check_8=" + check_8 + "&_GALLTYPE_=" + _GALLERY_TYPE_;
+
+		$('#div_con').data('processing', true);
+
+		var dccon_f_submit = function(grecaptchaToken) {
+            if(grecaptchaToken) {
+            	formData += '&g-recaptcha-token=' + grecaptchaToken;
+            }
+	        
+			$.ajax({
+				type : 'POST',
+				url : '/dccon/insert_icon' ,
+				cache : false ,
+				async : true ,
+				data : formData ,
+				success : function (data){
+					data = $.trim(data);
+					$('#div_con').data('processing', false);
+					
+					//차단 회원 또는 기타 에러
+					if (data.indexOf("false||") != -1) {
+						var strErrMsg = data.split('||');
+						if(strErrMsg.length >=2) {
+							if(strErrMsg[1] == 'captcha' && !grecaptchaResponse) {
+			        			$(self_elm).addClass('grecaptcha-submit');
+			        			$('.btn_white.tx_dccon['+ no_attr +']').parent().before('<div id="captcha_wrapper" class="fl"></div>');
+			        			
+			        			if(typeof(grecaptcha) == 'undefined') {
+			        				if(typeof(strErrMsg[2]) != 'undefined' && strErrMsg[2] == 'v3') {
+				        				$.getScript('https://www.google.com/recaptcha/api.js?render=6Lc-Fr0UAAAAAOdqLYqPy53MxlRMIXpNXFvBliwI', function() {
+				        			    	grecaptcha.ready(function() {
+				        			    	    grecaptcha.execute('6Lc-Fr0UAAAAAOdqLYqPy53MxlRMIXpNXFvBliwI', {action: 'insert_icon'}).then(function(token) {
+				        			    	    	dccon_f_submit(token);
+				        			    	    });
+				        			    	});
+				        				});
+			        				}
+			        				else {
+			        					load_recaptcha_v2();
+			        				}
+			        			}
+			        			else {
+			        				callbackRecaptcha();
+			        			}
+							}
+							else if(strErrMsg[1] == 'nomember') {
+								alert(strErrMsg[2]);
+							}
+							else {
+								alert(strErrMsg[1]);
+							}
+						}
+						else alert('사용 오류입니다. 관리자에게 문의하세요.');
+						return false;
+					}
+					switch (data) {
+						// 구매내역 없음
+						case('not_buy'):
+							alert('구매내역이 존재하지 않는 디시콘입니다.');
+						break;
+	
+						// 만료됨
+						case('expired'):
+							alert('사용기간이 만료된 디시콘입니다.');
+						break;
+	
+						// 패키지 상태 에러
+						case('unuseable'):
+							alert('해당 디시콘은 현재 사용 불가능합니다.');
+						break;
+	
+						case('not_exists') :
+							alert('잘못된 파일 경로 입니다.');
+						break;
+	
+						case('fail') :
+							alert('디시콘 입력에 실패하였습니다.');
+						break;
+	
+						case('form_error') :
+							alert('이름과 비밀번호를 정확하게 입력해주세요.');
+						break;
+	
+						case('code_fail') :
+							alert('자동입력 방지코드가 일치하지 않습니다.');
+							kcaptcha_init(no);
+						break;
+	
+						// 댓글 입력 성공
+						case('ok') :
+							$('#div_con').hide();
+							comment_refresh(no, c_no);
+							recent_list = '';
+						break;
+	
+						default:
+	
+							var result = "fail";
+							var package_idx = "";
+							var detail_idx = "";
+							var img_src = "";
+							var alt = "";
+							var temp = $.parseJSON(data);
+							console.log(temp);
+	
+							$.each(temp, function(i, n){
+								if (i == "result" && n != "") {
+									result = n;
+								} else if (i == "img_src" && n != "") {
+									img_src = n;
+								} else if (i == "alt" && n != "") {
+									alt = n;
+								}
+							});
+							if (result == "ok") {
+								// 입력창 숨기기
+								$('#div_con').hide();
+								recent_list = '';
+	
+								// 글작성
+								if (input_type == "write") {
+									insert_icon('<img class="written_dccon" src="'+img_src+'" conalt="'+alt+'" alt="'+alt+'" con_alt="'+alt+'" title="'+alt+'"/>');
+								// 댓글
+								} else if (input_type == "comment"){
+									comment_refresh();
+								}
+							} else {
+								alert('사용 오류입니다. 관리자에게 문의하세요.[1]');
+							}
+						break;
+					}
+				}
+				, error : function()
+				{
+					alert('사용 오류입니다. 관리자에게 문의하세요.[2]');
+				}
+			});
+		}
+		dccon_f_submit(null);
+	});
+
+	
+
+	$(document).on('mouseover', '.written_dccon', function() {
+		dccon_over(this);
+	});
+	$(document).on('mouseout', '.written_dccon', function() {
+		dccon_out(this);
+	});
+	
+	// 디시콘 페이징
+	$(document).on('click', '#div_con .dccon_list_paging button', function() {
+		var page_num = $(this).parents('.dccon_list_paging').children('.page_num').children('.now_num').text();
+		var total_num = $(this).parents('.dccon_list_paging').children('.page_num').children('.total_num').text();
+		
+		if($(this).hasClass('btn_prev')) {
+			if(page_num <= 1) {
+				return false;
+			} else {
+				page_num--;
+				$(this).parents('.dccon_list_paging').children('.page_num').children('.now_num').text(page_num);
+				$(this).parents('.dccon_list').children('.list_li').hide();
+				$(this).parents('.dccon_list').children('.list_' + page_num).show();
+				$(this).siblings('button').addClass('on');
+				if(page_num <= 1) $(this).removeClass('on');
+			}
+
+		} else if($(this).hasClass('btn_next')) {
+			if(page_num >= total_num) {
+				return false;
+			} else {
+				page_num++;
+				$(this).parents('.dccon_list_paging').children('.page_num').children('.now_num').text(page_num);
+				$(this).parents('.dccon_list').children('.list_li').hide();
+				$(this).parents('.dccon_list').children('.list_' + page_num).show();
+				$(this).siblings('button').addClass('on');
+				if(page_num >= total_num) $(this).removeClass('on');
+			}
+		}
+	
+
+	});
+	
+	setInterval(dccon_replace, 500);
+
+	
+});
+
+
+//-------------------------------------------------------------
+// 작성된 디시콘 alt, 디시콘 보기 버튼 레이어 
+//-------------------------------------------------------------
+var interval = null;
+
+function dccon_over(self) {
+	clearInterval(interval);
+	
+	var dccon = $(self);
+	var view_type = 'view';
+
+	if(dccon.attr('data-dcconOverStatus') != 'true') {
+		dccon.attr('data-dcconOverStatus', 'true');
+		if(dccon.parent('.coment_dccon_img').length <= 0) {
+			if(list_type == 'album') {
+				var view_type = 'list';
+			}
+			//글본문
+			dccon.wrap('<div class="comment_dccon clear"  onmouseout="dccon_out(this);"><div class="coment_dccon_img"></div></div>');
+			dccon.parent('div').after('<div class="coment_dccon_info clear dccon_over_box" onmouseover="dccon_btn_over(this);" onmouseout="dccon_btn_over(this);" style="display:none;"><span class="over_alt"></span><button type="button" class="btn_dccon_infoview div_package" data-type = "' + view_type + '" onclick="dccon_btn_click();" reqpath="/dccon">디시콘 보기</button></div>');
+		} 
+		//dccon.wrap('<span onmouseout="dccon_out(this);" style="display:inline-block; *display:inline; zoom:1; vertical-align:top;"><span class="con_inputpop"></span></span>');
+		//dccon.after('<span class="dccon_over_box" onmouseover="dccon_btn_over(this);" onmouseout="dccon_btn_over(this);" style="display:none;"><span class="con_over_alt"></span><button class="con_over_btn div_package" onclick="dccon_btn_click();" reqpath="/dccon">디시콘 보기</button></span>');
+
+	}
+	
+	var dccon_over_box = dccon.parents('.comment_dccon').children('.dccon_over_box');
+	var dccon_alt = dccon_over_box.find('.over_alt');
+	var chkTimeOver = function() {
+		$('.dccon_over_box').fadeOut(1000);
+		$('.dccon_over_box').attr('data-display', 'hide');
+		
+		dccon_alt.text(dccon.attr('alt'));
+		dccon_over_box.attr('data-display', 'show');
+		dccon.attr('title', '');
+		
+		dccon_over_box.fadeIn(200);
+		clearInterval(interval);
+	}
+	
+	if(dccon_over_box.attr('data-display') != 'show') {
+		interval = setInterval(chkTimeOver, 300);
+	}
+}
+function dccon_out(self) {
+	clearInterval(interval);
+	
+	var dccon = $(self);
+	var dccon_over_box = dccon.parents('.comment_dccon').children('.dccon_over_box');
+	var chkTimeOut = function() {
+		dccon.attr('title', dccon.attr('alt'));
+		dccon_over_box.attr('data-display', 'hide');
+		
+		dccon_over_box.fadeOut(200);
+		clearInterval(interval);
+	}
+	
+	interval = setInterval(chkTimeOut, 1000);
+}
+function dccon_btn_over(self) {
+	dccon_over($(self).parent().children('.written_dccon'));
+}
+function dccon_btn_out(self) {
+	dccon_out($(self).parent().children('.written_dccon'));
+}
+function dccon_btn_click() {
+//	$('#package_detail').css('top', $(window).scrollTop() + 25 +'px');
+}
+
+// 디시콘 호출 
+var icon_list = new Array();
+var recent_list = '';
+var hot_list = '';
+var setting_list = '';
+var max_page = 0;
+var dccon_input_layer = function() {
+	var tar = $("#div_con").data("tar");
+	var no = $("#div_con").data("no");
+	var stop_process = false;
+
+	// 기본은 아이콘 보이기
+	if (!tar) tar = "icon";
+	
+	if(!page_reload && (tar == 'icon' &&  icon_list.length > 0) || (tar == 'recent' &&  recent_list.length > 0) || (tar == 'shop' &&  hot_list != '') ) {
+		show_package();
+		return false;
+	} 
+	
+	var ci_t = get_cookie('ci_c');
+	$.ajax({
+		data : { 'ci_t' : ci_t, 'target' : tar, 'page' : page}
+		, type : 'POST'
+		, url : '/dccon/lists'
+		, cache : false
+		, async : true
+		, success : function (data){
+			// 비로그인
+			if (data == "not_login") {
+				if (confirm('로그인 후 이용 가능합니다.\n로그인 전환 시 기존내용은 저장되지 않습니다.')) {
+					var s_url = encodeURIComponent(location.href);
+					location.href = "https://dcid.dcinside.com/join/login.php?s_url=" + s_url;
+					return false;
+				}
+			} else if (data == 'fail') {
+				alert('비정상적인 접급입니다.');
+				return false;
+			} else {
+				try {
+					var temp = jQuery.parseJSON(data);
+					var tar = temp['target'];
+	
+					if(tar == 'icon') {
+						icon_list[page] = temp['list'];
+						max_page = temp['max_page'];
+					
+						if(page ==0 && max_page > page) {
+							
+						  setTimeout(function()	{
+							  icon_list_ready(page);
+							  },2000);
+						}
+	
+					} else if (tar == 'shop') {
+						$("#div_con").data("tar","shop");
+						hot_list = temp;
+						$('.btn_dccon_hot').addClass('on');
+						
+						call_top_dccon();
+					} else  if (tar == 'recent') {
+						if(temp['list'] == '') {
+							alert('최근 사용한 디시콘이 없습니다.');
+							return false;
+						}
+						$("#div_con").data("tar","recent");
+						recent_list = temp['list'];
+					}
+					show_package();
+				} catch(e) {
+					if(data.indexOf("false||") !== -1) {
+						var err = data.split("||");
+						alert(err[1]);
+					} else {
+						alert('오류가 발생하였습니다. 잠시후에 다시 시도해주세요.');
+					}
+				}
+			}
+		}
+	});
+}
+
+var icon_list_ready = function(i){
+	var ci_t = get_cookie('ci_c');
+	i++;
+	$.ajax({
+		data : { 'ci_t' : ci_t, 'target' : 'icon', 'page' : i}
+		, type : 'POST'
+		, url : '/dccon/lists'
+		, cache : false
+		, async : true
+		, success : function (data){
+			var temp = jQuery.parseJSON(data);
+			icon_list[i] = temp['list'];
+		}
+	});
+}
+
+var call_top_dccon = function() {
+	var dccon_layer_wrap = $("#div_con");
+	
+	// 일간 인기디시콘	
+	if($('.day_hotdccon.dccon_shop_list', dccon_layer_wrap).length <= 0) {
+		$.ajax({
+            url: "//json.dcinside.com/json1/dccon_day_top5.php",
+            type: "post",
+            dataType: "jsonp",
+            cache: true,
+            jsonpCallback: 'day_top5',
+            jsonp:"jsoncallback",
+            success: function(data) {
+			
+            }
+        });
+	}
+
+	// 주간 인기디시콘
+	if($('.week_hotdccon.dccon_shop_list', dccon_layer_wrap).length <= 0) {
+		$.ajax({
+            url: "//json.dcinside.com/json1/dccon_week_top5.php",
+            type: "post",
+            dataType: "jsonp",
+            cache: true,
+            jsonpCallback: 'week_top5',
+            jsonp:"jsoncallback",
+            success: function(data) {
+			
+            }
+        });
+	}
+}
+
+var day_top5 = function (data)
+{
+	var temp = new Array();
+	$.each(data,function(i, val){
+		val.addclass = 'day_hotdccon';
+		val.main_img_url = val.img;
+		temp.push(val);
+	});
+	$('#dccon_shop-tmpl').tmpl({'list' : temp}).insertAfter('#div_con .dw_hotcon .tabbox_btn');
+	$('#div_con .dw_hotcon .day_hotdccon').show();
+	$('#div_con .dw_hotcon .btn_tab.daily').click(function() {
+		$(this).addClass('on').siblings().removeClass('on');
+		$('#div_con .dw_hotcon .dccon_shop_list.day_hotdccon').show().siblings('.dccon_shop_list').hide();
+	});
+}
+
+var week_top5 = function (data)
+{
+	var temp = new Array();
+	$.each(data,function(i, val){
+		val.addclass = 'week_hotdccon';
+		val.main_img_url = val.img;
+		temp.push(val);
+	});
+	$('#dccon_shop-tmpl').tmpl({'list' : temp}).appendTo('#div_con .dw_hotcon');
+	$('#div_con .dw_hotcon .week_hotdccon').hide();
+	$('#div_con .dw_hotcon .btn_tab.weekly').click(function() {
+		$(this).addClass('on').siblings().removeClass('on');
+		$('#div_con .dw_hotcon .dccon_shop_list.week_hotdccon').show().siblings('.dccon_shop_list').hide();
+	});
+}
+
+// 패키지 설정 화면
+var show_setting = function ()
+{
+	var ci_t = get_cookie('ci_c');
+	$.ajax({
+		data : { 'ci_t' : ci_t }
+		, type : 'POST'
+		, url : '/dccon/setting'
+		, cache : false
+		, async : true
+		, success : function (data){
+			if (data) {
+				if (data == "not_login") {
+					if (confirm('로그인 후 이용 가능합니다.\n로그인 전환 시 기존내용은 저장되지 않습니다.')) {
+						var s_url = encodeURIComponent(location.href);
+						location.href = "https://dcid.dcinside.com/join/login.php?s_url=" + s_url;
+						return false;
+					}
+				} else {
+					setting_list = data;
+					$('.hot').hide();
+//					$('.dcconlist').hide();
+					$('.setting').html(data);
+					$('.setting').show();
+					$('.btn_dccon_setting').addClass('on');
+				}
+			} else {
+				alert('사용 가능한 디시콘이 없습니다.');
+				$('.btn_dccon_setting').removeClass('on');
+			}
+		}
+	});
+}
+
+var index = 0;
+var list_page = 24;
+var btn_prev_on = '';
+var btn_next_on = '';
+// 디시콘 노출
+var show_package = function () {
+	var dccon_layer_wrap	= $("#div_con");
+	var tar					= dccon_layer_wrap.data("tar");
+	var no					= dccon_layer_wrap.data("no");
+	var target				= dccon_layer_wrap.data("target");
+	
+	index					= dccon_layer_wrap.data("index");
+	
+	if (!tar)	tar = "icon";
+	if (!index)	index = "0";
+	
+	$('.dccon_list', dccon_layer_wrap).hide();
+	$('.hot', dccon_layer_wrap).hide();
+	$('.setting', dccon_layer_wrap).hide();
+	$('.tab_btnlist li', dccon_layer_wrap).removeClass('on');
+	$('.inner .clear button', dccon_layer_wrap).removeClass('on');
+
+	if(tar == 'icon' && icon_list.length > 0) {
+		if($('.li_pack').length > 0) {
+			$('#div_con .li_pack').remove();
+		}
+		$('#dccon_icon-tmpl').tmpl(icon_list[page]).insertAfter('.recent_li');
+
+		if (typeof(icon_list[page][index]) == "undefined") {
+			index = 0;
+		}
+
+		if($('.page_' + page + '_index_' + index).length >0) {
+			$('.page_' + page + '_index_' + index).show();
+		} else {
+			if(icon_list[page][index]['icon_cnt'] > list_page) {
+				btn_next_on = 'on';
+			} 
+			$('#dccon_list-tmpl').tmpl(icon_list[page][index]).appendTo('.dcconlist');
+		}
+
+		$('.li_pack').eq(index).addClass('on');
+		$('.dcconlist').show();
+	} else if (tar == 'shop' && hot_list['list'].length > 0) {
+		var shop_list_wrap = $('.dccon_list_box .hot_inner.hots', dccon_layer_wrap);
+
+		chg_home_html('hotList');
+		
+		if($('.dccon_shop_list', shop_list_wrap).length <= 0) {
+			$('#dccon_shop-tmpl').tmpl(hot_list).appendTo(shop_list_wrap);
+		} 
+		
+		$('.dccon_shop_list', shop_list_wrap).eq(0).show().siblings('.dccon_shop_list').hide();
+		$('.dccon_list_box.hot', dccon_layer_wrap).show();
+		$('.btn_dccon_hot', dccon_layer_wrap).addClass('on');
+
+	} else if (tar == 'recent' && recent_list.length > 0){
+		if($('.dcconlist .recent').length > 0){
+			//console.log(recent_list);
+			//$('#recent_list-tmpl').tmpl(recent_list).replaceAll('.recent li');
+		} else {
+			$('.dcconlist').append('<ul class="dccon_list clear recent"></ul>');
+			$('#recent_list-tmpl').tmpl(recent_list).appendTo('.dcconlist .recent');
+		}
+
+		$('.dcconlist').show();
+		$('.dcconlist .recent').show();
+		$('.recent_li').addClass('on');
+	}
+
+	/*if(list_type == 'album') {
+		$('#div_con').clone().insertAfter(target).show();
+	} else {
+		$('#div_con').insertAfter(target).show();
+	}*/
+	
+	$('#div_con').insertAfter(target).show();
+}
+
+//-------------------------------------------------------------
+// 패키지 설정 저장 하기
+//-------------------------------------------------------------
+var save_setting = function () {
+	if (confirm('변경 내용을 저장하시겠습니까?')) {
+		var ci_t = get_cookie('ci_c');
+		var list_opt = $('#list').val();
+		var div = $('#div_con #setting_' + list_opt);
+		var arr_idx = new Array();
+		var max_cnt = $('#div_con #setting_use').data('max_cnt');
+		//var now_cnt = $('#div_con #setting_use tbody tr').length;
+		var now_cnt = $('#con_setting #setting_use').data('use_cnt');
+		var add_cnt = 0;
+
+		// 최대개수 초과 여부 확인
+		if (list_opt == "notuse") {
+			$('#div_con #setting_notuse .package_check').each(function() {
+				if($(this).is(':checked')) ++add_cnt;
+			});
+
+			if ((add_cnt + now_cnt) > max_cnt) {
+				alert('사용 디시콘 선택이 '+max_cnt+'개를 초과하였습니다. 사용해제 후 변경해주세요.');
+				return false;
+			}
+		}
+
+		// 설정된 패키지 값만 저장
+		div.find('tr').each(function() {
+			var package_idx = $(this).find('.package_check').val();
+			if (package_idx && $(this).find('.package_check').is(':checked')) {
+				arr_idx.push(package_idx);
+			}
+		});
+
+		if (arr_idx.length < 1) {
+			alert('사용디시콘을 1개 이상 선택하시기 바랍니다.');
+			return false;
+		}
+
+		// 데이터 전송
+		if (arr_idx.length > 0) {
+			$.ajax({
+				data : { 'ci_t' : ci_t, 'arr_idx' : arr_idx, 'list_opt' : list_opt }
+				, type : 'POST'
+				, url : '/dccon/save_setting'
+				, cache : false
+				, async : true
+				, success : function (data){
+					if (data) {
+						// 설정 가능한 개수 초과
+						if (data == "list_over") {
+							alert('사용 디시콘 선택이 ' + max_cnt + '개를 초과하였습니다. 사용해제 후 변경해주세요.');
+						} else if (data == "fail") {
+							alert('비정상적인 접근입니다.');
+							return false;
+						} else {
+							// 화면 재설정
+							show_setting();
+						}
+					} else {
+						alert('오류가 발생하였습니다. 잠시후에 다시 시도해주세요.');
+					}
+				}
+			});
+		}
+	}
+}
+
+var comment_refresh = function (no, c_no) {
+	if(list_type == 'album') {
+		$("#no").val(no);
+		$('#div_con').clone().insertAfter($("body"));
+		$("#cmt_write_box_"+no).remove(); 
+		viewComments(1);
+		addCmtWriteForm(no);
+	} else {
+		if(c_no) {
+			$('#div_con').clone().insertAfter($("body"));
+		}
+		$('.btn_cmt_refresh').first().click();
+		if($("#kcaptcha_use").val() == 'Y') kcaptcha_init(no);
+	}
+}
+
+
+var dccon_replace = function() {
+	//console.log('dccon_replace');
+	//-------------------------------------------------------------
+	// 비공개 아이콘 처리
+	//-------------------------------------------------------------
+	// 본문
+	if ($('.gallview_contents img').length > 0) {
+		$('.gallview_contents img').each(function() {
+			if(typeof $(this).attr('src') != "undefined"){
+				//console.log($(this).attr('src'));
+				if ($(this).attr('src').match('dccon.php')) {
+					if ($(this).width() == 1 && $(this).height() == 1) {
+						$(this).wrap('<span class="replace"></span>');
+						$(this).hide();
+					}
+				}
+			}
+		})
+	}
+	
+	// 본문(앨범)
+	if ($('.album_cont img').length > 0) {
+		$('.album_cont img').each(function() {
+			if(typeof $(this).attr('src') != "undefined"){
+				//console.log($(this).attr('src'));
+				if ($(this).attr('src').match('dccon.php')) {
+					if ($(this).width() == 1 && $(this).height() == 1) {
+						$(this).wrap('<span class="replace"></span>');
+						$(this).hide();
+					}
+				}
+			}
+		})
+	}
+
+	// 댓글
+	if ($('.cmt_list').find('img').length > 0) {
+		$('.cmt_list img').each(function() {
+			if(typeof $(this).attr('src') != "undefined"){
+				//console.log($(this).attr('src'));
+				if ($(this).attr('src').match('dccon.php')) {
+					if ($(this).width() == 1 && $(this).height() == 1) {
+						$(this).wrap('<span class="replace"></span>');
+						$(this).hide();
+					}
+				}
+			}
+		})
+	}
+
+	$('span.replace').each(function() {
+		if ($(this).find('img').length > 0) {
+			var text = "";
+			if ($(this).find('img').attr('alt')) {
+				text = $(this).find('img').attr('alt');
+			} else if ($(this).find('img').attr('conalt')) {
+				text = $(this).find('img').attr('conalt');
+			}
+
+			if (text != "") {
+				$(this).html(text);
+			} else {
+				$(this).html('');
+			}
+		}
+	});
+}
+
+var search_page = function(p) {
+	$('#f_sch_dccon').data('page', p);
+	$('#f_sch_dccon').submit();
+}
+
+var chg_home_html = function(mode, total_count) {
+	var wrap_class = '';
+	
+	$('button.package_close').click();
+
+	$('#div_con .hot_inner.sch_con > .dccon_shop_list').remove();
+	
+	if(mode == 'hotList') {
+		$('#div_con .btn_tab.daily').click();
+		$('#f_sch_dccon .ul_selectric li').eq(0).click();
+		$('#f_sch_dccon .ul_selectric ul').hide();
+		$('#f_sch_dccon input[name="keyword"]').val('');
+		
+		// 인기 디시콘 디자인으로 전환 //
+		$('#div_con .hot_inner.sch_con').removeClass('sch_con').addClass('dw_hot');
+		
+		$('#div_con .hot_inner.dw_hot .dw_hotcon').show();					// 일간/주간 디시콘
+		$('#div_con .hot_inner.dw_hot').siblings('.hot_inner.hots').show();	// 인기 디시콘
+		$('#div_con .bottom_paging_box').hide().siblings('button').show();	// 페이징 hide, 더보기 show
+		
+		$('#div_con .dccon_search_none').hide();
+		
+		$('#div_con .hotcon_paging_btn .btn_hotcon_prev').removeClass('on');
+		$('#div_con .hotcon_paging_btn .btn_hotcon_next').addClass('on');
+
+		$('#div_con .pop_dccon_tit.sch_txt').hide().siblings('.pop_dccon_tit').show();
+		
+	}
+	else if(mode == 'search') {
+		// 검색결과 디자인으로 전환 //
+		$('#div_con .hot_inner.dw_hot .dw_hotcon').hide();
+		$('#div_con .hot_inner.dw_hot').siblings('.hot_inner.hots').hide();
+		$('#div_con .bottom_paging_box').show().siblings('button').hide();
+
+		$('#div_con .pop_dccon_tit.sch_txt .dccon_sch_num').text('('+ number_format(total_count) +')');
+		$('#div_con .pop_dccon_tit.sch_txt').show().siblings('.pop_dccon_tit').hide();
+
+		$('#div_con .hot_inner.dw_hot').removeClass('dw_hot').addClass('sch_con');
+	}
+	
+	
+}

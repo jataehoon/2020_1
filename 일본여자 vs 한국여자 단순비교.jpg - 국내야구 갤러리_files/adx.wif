@@ -1,0 +1,255 @@
+
+var wif_adx = {
+	code:'61',
+	type:'2',
+	width:300,
+	height:250,
+	passback:'',
+	charset:'UTF-8',
+	location:'https%3A%2F%2Fgall.dcinside.com%2Fboard%2Fview%2F%3Fid%3Dbaseball_new10%26no%3D3508858%26exception_mode%3Drecommend%26page%3D1',
+	referer:'https%3A%2F%2Fgall.dcinside.com%2Fboard%2Flists%2F%3Fid%3Dbaseball_new10%26exception_mode%3Drecommend',
+	ad_url:'https://adx.turl.co.kr/pick.wif',
+	mbf: false,
+	close_click: false,
+	tid: null,
+	ctid: null,
+	make_iframe: 0,
+	show_banner: 0,
+	loadScript: function(url, callback) {
+		var script = document.createElement('script');
+		script.type = 'text/javascript';
+		script.onreadystatechange = function() {
+			if (script.readyState == 'loaded' || script.readyState == 'complete') {
+				script.onreadystatechange = null;
+				callback();
+			}
+		};
+		script.onload = function() {
+			callback();
+		};
+		script.src = url;
+		document.getElementsByTagName('head')[0].appendChild(script);
+	},
+	setCookie: function(cname, cvalue, exdays) {
+		var d = new Date();
+		d = new Date(parseInt(d.getTime() / 86400000) * 86400000 + 54000000);
+		if (d > new Date()) exdays = exdays - 1;
+		d.setDate(d.getDate() + exdays);
+		var expires = 'expires=' + d.toGMTString();
+		document.cookie = cname + '=' + cvalue + '; ' + expires;
+	},
+	setCookieTime: function(cname, cvalue, sec) {
+		var d = new Date();
+		d.setTime(d.getTime() + sec * 1000);
+		var expires = 'expires=' + d.toGMTString();
+		document.cookie = cname + '=' + cvalue + '; ' + expires;
+	},
+	getCookie: function(cname) {
+		var name = cname + '=';
+		var ca = document.cookie.split(';');
+		for (var i = 0; i < ca.length; i++) {
+			var c = ca[i];
+			while (c.charAt(0) == ' ') c = c.substring(1);
+			if (c.indexOf(name) == 0) return c.substring(name.length, c.length);
+		}
+		return '';
+	},
+	checkWifAdxPause: function() {
+		return wif_adx.getCookie('wif_adx_pause');
+	},
+	setListener: function() {
+		if (window.addEventListener) {
+			window.addEventListener('message', wif_adx.listenMessage, false);
+		} else {
+			window.attachEvent('onmessage', wif_adx.listenMessage);
+		}
+	},
+	listenMessage: function(e) {
+		try {
+			var d = $.parseJSON(e.data);
+			switch (d.result) {
+				case 'end':
+					wif_adx.exitBanner();
+					break;
+			}
+		} catch(err) {
+		}
+	},
+	makeBanner: function() {
+		if (wif_adx.mbf == true) {
+			return false;
+		}
+
+		if ($(window).width() <= wif_adx.width || $(window).height() <= wif_adx.height) {
+			return false;
+		}
+
+		wif_adx.mbf = true;
+
+		var wrap = $('<div />', {
+			id: 'wif_adx_banner_wrap'
+		}).css({
+			'width': wif_adx.width + 'px',
+			'height': wif_adx.height + 'px',
+			'position': 'fixed',
+			'right': 0,
+			'bottom': 0,
+			'z-index': 2147483647
+		}).hide();
+
+		var close = $('<a />', {
+			id: 'wif_adx_banner_close'
+		}).css({
+			'position': 'absolute',
+			'top': '5px',
+			'right': '5px',
+			'cursor': 'pointer'
+		}).appendTo(wrap);
+
+		$('<img />', {
+			src: 'https://adx.turl.co.kr/image/close.png'
+		}).appendTo(close);
+
+		close.click(function() {
+			wif_adx.close_click = true;
+			wif_adx.hideBanner(300);
+		});
+
+		close.hide().delay(3000).fadeIn();
+
+		$('body').append(wrap);
+
+		$(window).resize(function() {
+			if (wif_adx.checkOverlap() == true) {
+				wif_adx.exitBanner();
+				return false;
+			} else {
+				if (wif_adx.make_iframe == 0 && wif_adx.show_banner == 0) {
+					wif_adx.makeIframe();
+				} else if (wif_adx.make_iframe == 1 && wif_adx.close_click == false) {
+					wif_adx.showBannerRe();
+				}
+			}
+		});
+
+		$(window).scroll(function() {
+			if (wif_adx.checkOverlap() == true) {
+				wif_adx.exitBanner();
+				return false;
+			} else {
+				if (wif_adx.make_iframe == 0 && wif_adx.show_banner == 0) {
+					wif_adx.makeIframe();
+				} else if (wif_adx.make_iframe == 1 && wif_adx.close_click == false) {
+					wif_adx.showBannerRe();
+				}
+			}
+		});
+
+		wif_adx.makeIframe();
+	},
+	makeIframe: function() {
+		if (wif_adx.checkOverlap() == true) {
+			return false;
+		}
+
+		wif_adx.make_iframe++;
+		var iframe = $('<iframe />', {
+			id: 'wif_adx_iframe',
+			src: wif_adx.ad_url + '?code=' + wif_adx.code + '&type=' + wif_adx.type + '&width=' + wif_adx.width + '&height=' + wif_adx.height + '&passback=' + wif_adx.passback + '&charset=' + wif_adx.charset + '&location=' + wif_adx.location + '&referer=' + wif_adx.referer,
+			frameborder: 0,
+			scrolling: 'no'
+		}).css({
+			'width': wif_adx.width + 'px',
+			'height': wif_adx.height + 'px'
+		});
+
+		$('#wif_adx_banner_wrap').append(iframe);
+
+		wif_adx.tid = setInterval(wif_adx.showBanner, 2000);
+	},
+	showBanner: function() {
+		wif_adx.show_banner++;
+		clearInterval(wif_adx.tid);
+		$('#wif_adx_banner_wrap').slideDown(600);
+
+		wif_adx.ctid = setInterval(wif_adx.setPauseCookie, 3000);
+	},
+	showBannerRe: function() {
+		if($('#wif_adx_banner_wrap').is(':visible')) {
+			return false;
+		}
+
+		$('#wif_adx_banner_wrap').show();
+
+		wif_adx.ctid = setInterval(wif_adx.setPauseCookie, 3000);
+	},
+	setPauseCookie: function() {
+		clearInterval(wif_adx.ctid);
+		var t = 4 * 60;
+		wif_adx.setCookieTime('wif_adx_pause', true, t);
+	},
+	hideBanner: function(t) {
+		if (wif_adx.ctid != null) {
+			clearInterval(wif_adx.ctid);
+		}
+		$('#wif_adx_banner_wrap').slideUp(t);
+	},
+	exitBanner: function() {
+		if (wif_adx.tid != null) {
+			clearInterval(wif_adx.tid);
+		}
+		if (wif_adx.ctid != null) {
+			clearInterval(wif_adx.ctid);
+		}
+		if ($('#wif_adx_banner_wrap').is(':visible')) {
+			wif_adx.hideBanner(0);
+		}
+	},
+	comparePosition: function(a, b) {
+		var left = (a.l >= b.l && a.l < b.l + b.w) || (b.l >= a.l && b.l < a.l + a.w) ? true : false;
+		var top = (a.t >= b.t && a.t < b.t + b.h) || (b.t >= a.t && b.t < a.t + a.h) ? true : false;
+		return (left && top)
+	},
+	checkOverlap: function() {
+		var bp = {
+			'l': $(window).scrollLeft() + $(window).width() - wif_adx.width,
+			't': $(window).scrollTop() + $(window).height() - wif_adx.height,
+			'w': wif_adx.width,
+			'h': wif_adx.height
+		};
+		var isOverlap = false;
+		
+					$('div[class="con_banner _BTN_AD_"], div[id="dc_advertisement"], iframe[id^="google_ads"], ins[class="daum_ddn_area"]').each(function() {
+						var p = $(this).offset();
+						isOverlap = wif_adx.comparePosition(bp, {
+							'l': p.left,
+							't': p.top,
+							'w': $(this).width(),
+							'h': $(this).height()
+						});
+						if (isOverlap == true) {
+							return false
+						}
+					});
+				
+		return isOverlap;
+	},
+	init: function() {
+		if (wif_adx.checkWifAdxPause() === 'true') {
+            return;
+		}
+
+		$(document).ready(function() {
+			wif_adx.setListener();
+			wif_adx.makeBanner();
+		});
+	}
+};
+
+if (typeof window.jQuery == 'undefined') {
+	var url = 'https://ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js';
+	wif_adx.loadScript(url, wif_adx.init);
+} else {
+	wif_adx.init();
+}
+	

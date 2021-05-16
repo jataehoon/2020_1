@@ -1,0 +1,179 @@
+$(document).ready(function() {
+	//var navi_btn = $('.dcgnb .gnb_list .gnb1');
+	var navi_btn = $('.hover_gnb');
+	var navi_btn2 = $('.gnb_area');
+	var more_btn = $('.btn_depth');
+	
+
+	if(window.location != window.parent.location) {		// iframe
+		$('iframe[src="'+  window.location +'"]', parent.document).after($('#gnb1_sub').html());
+	}
+	else {												// no iframe
+		$('.dcgnb').after($('#gnb1_sub').html());
+	}
+	
+	var children_menu_layer = $('.depth2').index() > -1 ? $('.depth2') : $('.depth2', parent.document);
+	var children_menu_layer2 = $('.depthbox').index() > -1 ? $('.depthbox') : $('.depthbox', parent.document);
+
+	// GNB 버튼
+	navi_btn.hover(function() {
+			if(children_menu_layer.css('display') == 'none') {
+				children_menu_layer.css('opacity', '0').show();
+
+			}
+			children_menu_layer.stop().animate({ opacity:1 }, 200);
+		},
+		function() {
+			children_menu_layer.stop().animate({ opacity:0 }, 200, function() { $(this).hide();});
+			
+		}
+	);
+
+	navi_btn2.hover(function(){
+			if(children_menu_layer.css('opacity') > 0.8){
+				children_menu_layer.stop().animate({ opacity:1 }, 200);
+			}
+		},
+		function() {
+			
+			children_menu_layer.stop().animate({ opacity:0 }, 200, function() { $(this).hide();});
+			
+		}
+	);
+	
+	// 서브 메뉴 레이어
+	children_menu_layer.hover(function() {
+			if($(this).css('opacity') > 0.8) {
+				$(this).stop().animate({ opacity:1 }, 200);
+			
+			}
+		},
+		function() {
+			$(this).stop().animate({ opacity:0 }, 200, function() { $(this).hide();});
+			
+		}
+	);
+	
+	// GNB 버튼
+	more_btn.hover(function() {
+			if(children_menu_layer2.css('display') == 'none') {
+				children_menu_layer2.css('opacity', '0').show();
+
+			}
+			children_menu_layer2.stop().animate({ opacity:1 }, 200);
+			$('.btn_depth').addClass('open');
+		},
+		function() {
+			children_menu_layer2.stop().animate({ opacity:0 }, 200, function() { $(this).hide();});
+			$('.btn_depth').removeClass('open');
+		}
+	);
+	
+	// 서브 메뉴 레이어
+	children_menu_layer2.hover(function() {
+			if($(this).css('opacity') > 0.8) {
+				$(this).stop().animate({ opacity:1 }, 200);
+				$('.btn_depth').addClass('open');
+			}
+		},
+		function() {
+			$(this).stop().animate({ opacity:0 }, 200, function() { $(this).hide();});
+			$('.btn_depth').removeClass('open');
+			
+		}
+	);
+
+	//서비스 열기/접기 (푸터메뉴)
+	$('.menu_fold').click(function(){
+		$('.menu_fold').hide();
+		$('.menu_open').show();
+		$('.all_list').hide();
+	});
+	$('.menu_open').click(function(){
+		$('.menu_open').hide();
+		$('.menu_fold').show();
+		$('.all_list').show();
+	});
+	
+	// GNB
+	$('.link_gnb').click(function(event){
+		var csrf_token = get_cookie('ci_c');
+		//	document.domain = 'dcinside.com';
+		var ajax_url	= $(this).attr('url_code');
+		var href = $(this).attr('href');
+		var target = $(this).attr('target');
+			
+		if(target != '_blank'){
+			event.preventDefault();	
+		}
+		if (ajax_url) {
+			$.ajax({
+				type:"POST",
+				url: "/ajax/log_ajax/topmenu_log/",
+				data : {
+					ci_t : csrf_token, section : ajax_url
+				},		
+				cache: false,
+				async: false,
+				dataType: "json",
+				timeout:2000,
+				success:function(html){
+					if(target != '_blank'){
+						$(top.location).attr('href' , href);
+					}
+				}
+			});
+		}
+
+	});
+	//게시글, 댓글 수 롤링
+	setInterval("gall_content_fade()", 3000);
+});
+
+//갤러리 수 및 글수 노출
+function gall_content_fade() {
+	$('.gall_exposure>div:first-child').slideUp();
+ $('.gall_exposure>div').each(function(){
+     if ($(this).is(':first-child')) {
+         $(this).slideUp(
+             function() {
+                 $(this).appendTo($(this).parent()).slideDown();
+             }
+         );
+     }
+ });
+}
+
+//접근성 onkeyup용
+function subMenuLyrShow() {
+	if(window.location != window.parent.location) {		// iframe
+		$('iframe[src="'+  window.location +'"]', parent.document).after($('#gnb1_sub').html());
+	}
+	else {												// no iframe
+		$('.dcgnb').after($('#gnb1_sub').html());
+	}
+	
+	var children_menu_layer = $('.depth2').index() > -1 ? $('.depth2') : $('.depth2', parent.document);
+	
+	if(children_menu_layer.css('display') == 'none') {
+		children_menu_layer.css('opacity',1);
+		children_menu_layer.show();
+	}
+}
+
+//접근성 onBlur용
+function subMenuLyrHide() {
+	if(window.location != window.parent.location) {		// iframe
+		$('iframe[src="'+  window.location +'"]', parent.document).after($('#gnb1_sub').html());
+	}
+	else {												// no iframe
+		$('.dcgnb').after($('#gnb1_sub').html());
+	}
+	
+	var children_menu_layer = $('.depth2').index() > -1 ? $('.depth2') : $('.depth2', parent.document);
+	
+	if(children_menu_layer.css('display') != 'none') {
+		children_menu_layer.css('opacity',0);
+		children_menu_layer.hide();
+	}
+}

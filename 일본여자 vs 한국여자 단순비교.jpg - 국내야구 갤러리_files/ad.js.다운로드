@@ -1,0 +1,42 @@
+//----------------------------------------------------------------------------------------
+// 스크롤링 광고
+//----------------------------------------------------------------------------------------
+$(function () {
+	/* 스크롤링 광고 구분데이터 */
+	var ad_division = $('#scrolling_ad').attr('division');
+	
+	/* 스크롤링 광고 */
+	if (ad_division == 'Y') {
+		
+		/* 광고 스크롤링 */
+		var moveing;
+		/* 스크롤링 광고 위치 */
+		var scrolling_ad_gap = 50;
+		/* 광고 이미지 높이 */
+		var ad_height = 726;
+		/* 광고 css top */
+		var silence_ad_top = $('#scrolling_ad').offset().top;
+		/* 스크롤링 한계 높이 */
+		var maxscrolling_top = $('.btn_recommend_box').offset().top - ad_height - scrolling_ad_gap;
+	
+		/* 광고 스크롤링 */
+		$(window).scroll(function(){
+			
+			/* 스크롤 높이 */
+			var scroll_top = $(document).scrollTop();
+			
+			/* 스크롤링 높이 */
+			if (scroll_top <= silence_ad_top) {
+				moveing = 0;
+			} else if (scroll_top <= maxscrolling_top) {
+				moveing = (scroll_top + scrolling_ad_gap) - silence_ad_top;
+			}
+			
+			$('#scrolling_ad').stop();
+			$('#scrolling_ad').animate( { "top": moveing + "px" }, 300 );
+			
+		});
+		
+	}
+	
+});
